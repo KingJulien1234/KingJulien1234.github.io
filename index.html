@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mario Kart Turnier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#fbfbf6;--grid:#cfe0ec;--ink:#1d2433;--red:#d93a2b;--blue:#2a4fa8;--card:#ffffffcc;--mut:#6b7488;--ok:#2e8b57;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#1b2030;--grid:#2a3350;--ink:#e8ebf5;--red:#ff6b5a;--blue:#8aa9ff;--card:#232a40cc;--mut:#98a1b8;--ok:#5fd18f}}
+:root[data-theme="dark"]{--paper:#1b2030;--grid:#2a3350;--ink:#e8ebf5;--red:#ff6b5a;--blue:#8aa9ff;--card:#232a40cc;--mut:#98a1b8;--ok:#5fd18f}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:500 16px/1.4 Nunito,system-ui,sans-serif;
+background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;min-height:100vh}
+main{max-width:520px;margin:0 auto;padding:14px 14px 96px}
+h1,h2,h3{font-family:'Permanent Marker','Comic Sans MS',cursive;font-weight:400;color:var(--red);margin:0}
+h1{font-size:30px;text-align:center;margin:6px 0 2px}
+h2{font-size:22px;margin:18px 0 8px}
+h3{font-size:18px;color:var(--blue);margin:0 0 8px}
+.sub{text-align:center;color:var(--mut);margin:0 0 12px;font-size:14px}
+.steps{display:flex;gap:6px;justify-content:center;margin:8px 0 6px;flex-wrap:wrap}
+.steps button{font-family:'Permanent Marker',cursive;font-size:13px;padding:3px 10px;border:2px solid var(--mut);border-radius:20px;color:var(--mut);background:none}.steps button.past{border-color:var(--blue);color:var(--blue)}.steps button.on{border-color:var(--red);color:var(--red);transform:rotate(-2deg)}.steps button:disabled{opacity:.45}
+.card{background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:12px;margin:10px 0;backdrop-filter:blur(2px)}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0}
+input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--paper);border:2px solid var(--mut);border-radius:8px;padding:9px 10px;min-width:0}
+input[type=text]{flex:1}
+input:focus,select:focus,button:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+input.pts{width:84px;text-align:center;font-weight:800;font-size:18px;color:var(--blue)}
+.nm{flex:1;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button{font:800 16px Nunito,sans-serif;border:2px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer}
+button.main{background:var(--red);color:#fff;border-color:var(--red);width:100%;padding:14px;font-size:18px}
+button.main:disabled{opacity:.4}
+button.x{padding:6px 11px;border-color:var(--mut);color:var(--mut)}
+button.ghost{border-style:dashed;width:100%}
+label.sw{display:flex;gap:10px;align-items:center;font-weight:700}
+label.sw input{width:22px;height:22px;accent-color:var(--red)}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0}
+.hint{font-size:13px;color:var(--mut);margin:4px 0 0}
+table{width:100%;border-collapse:collapse}
+td,th{padding:6px 4px;text-align:left;border-bottom:1px solid var(--grid)}
+th{font-size:13px;color:var(--mut)}
+td.n,th.n{text-align:right;font-weight:800}
+tr.cut td{border-bottom:3px solid var(--red)}
+tr.q td:first-child{color:var(--ok);font-weight:800}
+.done{border-color:var(--ok)}
+.tag{font-size:12px;font-weight:800;color:var(--ok)}
+.out{color:var(--red);font-weight:800;font-size:13px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,var(--paper) 35%)}
+.bar>*{max-width:492px;margin:0 auto;display:block}
+.pod{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;padding:8px 0;border-bottom:1px dashed var(--mut)}
+.pod b{font-family:'Permanent Marker',cursive;font-weight:400;color:var(--red);width:42px;font-size:24px}
+.big{font-size:56px;text-align:center;margin:0}
+.link{background:none;border:0;color:var(--mut);text-decoration:underline;font-weight:700;padding:8px;width:100%}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const $=s=>document.querySelector(s),uid=()=>Math.random().toString(36).slice(2,8),KEY='mk-turnier-v1';
+const fresh=()=>({players:[1,2,3,4].map(()=>({id:uid(),name:''})),opts:{vor:true,k:4,q:4},phase:'setup',seed:[],cups:[],rounds:[],alive:[],outOrder:[],vorRank:[],champ:null,view:null,vtb:[]});
+let S;try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const nm=id=>(S.players.find(p=>p.id===id)||{}).name||'?';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const val=v=>v===undefined||v===''?null:Number(v);
+const seedIx=id=>S.seed.indexOf(id);
+
+function cmpTb(a,b){for(const t of (S.vtb||[])){if(t.pl.includes(a)&&t.pl.includes(b)){const d=(val(t.pts[b])||0)-(val(t.pts[a])||0);if(d)return d}}return 0}
+function totals(){const t={};S.seed.forEach(i=>t[i]=0);
+ S.cups.forEach(c=>c.pl.forEach(i=>{const v=val(c.pts[i]);if(v!==null)t[i]+=v}));
+ return S.seed.slice().sort((a,b)=>t[b]-t[a]||cmpTb(a,b)||seedIx(a)-seedIx(b)).map(i=>({id:i,pts:t[i]}))}
+function vorTie(){const T=totals(),q=Math.min(S.opts.q,T.length);if(q>=T.length)return null;
+ const a=T[q-1].id;if(T[q-1].pts!==T[q].pts||cmpTb(a,T[q].id))return null;
+ const ids=T.filter(x=>x.pts===T[q-1].pts&&!cmpTb(x.id,a)).map(x=>x.id);return ids.length>1?ids:null}
+function resolve(R,gi){const g=R.groups[gi],mn=(l,p)=>{const m=Math.min(...l.map(i=>val(p[i])||0));return l.filter(i=>(val(p[i])||0)===m)};
+ let T=mn(g.pl,g.pts);for(const s of ((R.tb&&R.tb[gi])||[])){if(T.length<2)break;T=mn(T,s.pts)}
+ return T.length>1?{pending:T}:{loser:T[0]}}
+function stats(){const s={};S.players.forEach(p=>s[p.id]={t:0,n:0});
+ const add=g=>g.pl.forEach(i=>{const v=val(g.pts[i]);if(v!==null){s[i].t+=v;s[i].n++}});
+ S.cups.forEach(add);S.rounds.forEach(r=>r.groups.forEach(add));return s}
+
+function start(){
+ S.players.forEach((p,i)=>{p.name=p.name.trim()||'Spieler '+(i+1)});
+ S.seed=S.players.map(p=>p.id);const N=S.seed.length,k=Math.min(S.opts.k,N);
+ S.rounds=[];S.outOrder=[];S.champ=null;S.vorRank=[];S.vtb=[];S.view=null;
+ if(S.opts.vor&&N>2){
+  const n=N>k?N:3;S.cups=[];
+  for(let i=0;i<n;i++)S.cups.push({pl:N>k?[...Array(k)].map((_,j)=>S.seed[(i+j)%N]):S.seed.slice(),pts:{}});
+  S.phase='vor';
+ }else{S.cups=[];S.alive=S.seed.slice();S.phase='ko';newRound()}
+ save();render()}
+
+function newRound(){
+ const a=S.alive,n=a.length,k=Math.max(2,S.opts.k);
+ if(n===1){S.champ=a[0];S.phase='done';return}
+ const g=n<=k?1:Math.ceil(n/k),gs=[...Array(g)].map(()=>[]);
+ a.forEach((id,i)=>{const r=Math.floor(i/g);gs[r%2?g-1-i%g:i%g].push(id)});
+ const label=n===2?'Finale':n<=4?'Halbfinale':'K.-o.-Runde '+(S.rounds.length+1);
+ S.rounds.push({label,groups:gs.map(pl=>({pl,pts:{}})),out:null,tb:{}})}
+
+function finishVor(){
+ const r=totals().map(x=>x.id);S.vorRank=r;const q=Math.min(S.opts.q,r.length);
+ S.alive=r.slice(0,q);S.seed=S.alive.concat(r.slice(q));S.phase='ko';S.view=null;newRound();save();render();scrollTo(0,0)}
+
+function finishRound(){
+ const R=S.rounds[S.rounds.length-1],out=[];
+ R.groups.forEach((g,i)=>{if(g.pl.length>=2)out.push(resolve(R,i).loser)});
+ out.sort((a,b)=>{const ga=R.groups.find(g=>g.pl.includes(a)),gb=R.groups.find(g=>g.pl.includes(b));return (val(ga.pts[a])||0)-(val(gb.pts[b])||0)});
+ R.out=out;S.outOrder.push(...out);S.alive=S.alive.filter(i=>!out.includes(i));S.view=null;
+ if(S.alive.length===1){S.champ=S.alive[0];S.phase='done'}else newRound();
+ save();render();scrollTo(0,0)}
+
+function standings(){
+ const rest=S.vorRank.filter(i=>!S.alive.includes(i)&&!S.outOrder.includes(i)&&i!==S.champ);
+ return [S.champ,...S.outOrder.slice().reverse(),...rest]}
+
+const complete=gs=>gs.every(g=>g.pl.every(i=>val(g.pts[i])!==null));
+function vorBtn(){const L='Vorrunde abschließen';if(!complete(S.cups)||!complete(S.vtb||[]))return{dis:true,label:L};
+ const t=vorTie();return{dis:false,label:t?'Gleichstand: Stechen starten':L}}
+function koBtn(){const R=S.rounds[S.rounds.length-1],L=R.label==='Finale'?'Sieger ermitteln':'Runde auswerten';
+ if(!complete(R.groups.filter(g=>g.pl.length>1))||!complete(Object.values(R.tb||{}).flat()))return{dis:true,label:L};
+ const p=R.groups.some((g,i)=>g.pl.length>1&&resolve(R,i).pending);return{dis:false,label:p?'Gleichstand: Stechen starten':L}}
+function setBtn(){const b=$('#go');if(!b||S.phase==='setup')return;const s=S.phase==='vor'?vorBtn():koBtn();b.disabled=s.dis;b.textContent=s.label}
+
+const curName=()=>S.phase==='setup'?'Setup':S.phase==='vor'?'Vorrunde':S.phase==='ko'?'K.-o.':'Sieger';
+function steps(V){const hv=S.phase==='setup'?S.opts.vor:S.cups.length>0,o=hv?['Setup','Vorrunde','K.-o.','Sieger']:['Setup','K.-o.','Sieger'],ci=o.indexOf(curName());
+ return '<div class="steps">'+o.map((x,i)=>`<button data-view="${x}" ${i>ci?'disabled':''} class="${x===V?'on':i<=ci?'past':''}">${x}</button>`).join('')+'</div>'}
+
+const ptsRows=(g,at,ro)=>g.pl.map(id=>`<div class="row"><span class="nm">${esc(nm(id))}</span><input class="pts" type="number" inputmode="numeric" min="0" placeholder="Pkt." ${at} data-p="${id}" value="${g.pts[id]??''}" ${ro?'disabled':''} aria-label="Punkte ${esc(nm(id))}"></div>`).join('');
+function totalsHtml(){const T=totals(),q=Math.min(S.opts.q,T.length);
+ return '<table><tr><th>#</th><th>Name</th><th class="n">Punkte</th></tr>'+T.map((x,i)=>`<tr class="${i<q?'q':''} ${i===q-1&&q<T.length?'cut':''}"><td>${i+1}.</td><td>${esc(nm(x.id))}</td><td class="n">${x.pts}</td></tr>`).join('')+'</table>'}
+const tbCards=(l,at,ro,title,hint)=>l.map((s,i)=>`<div class="card"><h3>${title}</h3><p class="hint">${hint}</p>${ptsRows(s,at(i),ro)}</div>`).join('');
+function pastRound(r){const f=g=>g.pl.slice().sort((a,b)=>(val(g.pts[b])||0)-(val(g.pts[a])||0)).map(id=>esc(nm(id))+' '+(g.pts[id]??'–')).join(' · ');
+ return `<div class="card"><h3>${r.label}</h3>`+r.groups.map((g,i)=>`<div>${r.groups.length>1?'<b>Gruppe '+(i+1)+':</b> ':''}${f(g)}</div>`).join('')+
+ Object.values(r.tb||{}).flat().map(s=>`<div class="hint">Stechen: ${f(s)}</div>`).join('')+(r.out?`<div class="out">raus: ${r.out.map(i=>esc(nm(i))).join(', ')}</div>`:'')+'</div>'}
+
+function render(){
+ const cur=curName(),V=S.view&&S.view!==cur?S.view:cur,ro=V!==cur,N=S.players.length;
+ let h='<h1>🏁 Mario Kart Turnier</h1>'+steps(V),bar='';
+ if(V==='Setup'&&ro){
+  h+='<div class="card"><h3>Spieler</h3>'+S.players.map((p,i)=>`<div>${i+1}. ${esc(p.name)}</div>`).join('')+`<p class="hint">${S.cups.length?`Vorrunde: ${S.cups.length} Cups, ${Math.min(S.opts.k,N)} Fahrer pro Lobby, Top ${Math.min(S.opts.q,N)} weiter`:'Ohne Vorrunde, direkt K.-o.'}</p></div>`;
+ }else if(V==='Setup'){
+  h+='<p class="sub">Spieler eintragen, Modus wählen, los geht’s.</p><div class="card"><h3>Spieler (<span id="cnt">'+N+'</span>)</h3>'+
+  S.players.map((p,i)=>`<div class="row"><input type="text" data-name="${p.id}" placeholder="Spieler ${i+1}" value="${esc(p.name)}" maxlength="20" autocomplete="off"><button class="x" data-del="${p.id}" aria-label="Spieler entfernen">✕</button></div>`).join('')+
+  '<div class="row"><button class="ghost" data-act="add">+ Spieler hinzufügen</button></div><button class="link" data-act="shuf">Reihenfolge mischen</button></div>'+
+  `<div class="card"><h3>Modus</h3>
+  <label class="sw"><input type="checkbox" data-opt="vor" ${S.opts.vor?'checked':''}>Vorrunde (Gruppenphase) vor dem K.-o.</label>
+  <p class="hint">Jeder Cup wird mit wenigen Fahrern gespielt, alle Punkte zählen. Bei vielen Spielern wechseln die Lobbys reihum wie auf dem Flipchart.</p>
+  <div class="opt"><span>Fahrer pro Lobby</span><select data-opt="k">${[2,3,4,5,6,8,12].map(v=>`<option ${v===S.opts.k?'selected':''}>${v}</option>`).join('')}</select></div>
+  ${S.opts.vor?`<div class="opt"><span>Weiter ins K.-o.</span><select data-opt="q">${Array.from({length:Math.max(0,N-2)},(_,i)=>i+2).map(v=>`<option ${v===Math.min(S.opts.q,N-1)?'selected':''}>${v}</option>`).join('')}</select></div>`:''}
+  <p class="hint">K.-o.: In jeder Runde scheidet der Letzte jeder Gruppe aus, bis nur das Finale mit 2 Spielern bleibt. Bei Gleichstand gibt es ein Stechen.</p></div>`;
+  bar=`<button class="main" id="go" ${N<2?'disabled':''} data-act="start">Turnier starten</button>`;
+ }else if(V==='Vorrunde'){
+  h+=`<h2>Vorrunde</h2><div class="card"><h3>${ro?'Endstand':'Zwischenstand'}</h3><div id="tot">${totalsHtml()}</div><p class="hint">Rot markiert: Die Top ${Math.min(S.opts.q,S.seed.length)} kommen weiter. Gleichstand an der Grenze: Stechen.</p></div>`+
+  S.cups.map((c,i)=>`<div class="card ${complete([c])?'done':''}" data-card="${i}"><h3>Cup ${i+1} ${complete([c])?'<span class="tag">✓ fertig</span>':''}</h3>${ptsRows(c,`data-g="${i}"`,ro)}</div>`).join('')+
+  tbCards(S.vtb||[],i=>`data-vt="${i}"`,ro,'Stechen um den letzten Platz','Gleichstand an der Grenze. Wer hier vorne liegt, kommt weiter.');
+  if(!ro)bar=`<button class="main" id="go" data-act="fv">Vorrunde abschließen</button>`;
+ }else if(V==='K.-o.'){
+  const R=S.rounds[S.rounds.length-1];
+  if(ro){h+=S.rounds.map(pastRound).join('')}
+  else{
+   h+=`<h2>${R.label}</h2><p class="sub">Noch ${S.alive.length} im Rennen · der Letzte jeder Gruppe scheidet aus</p>`+
+   R.groups.map((g,i)=>`<div class="card"><h3>${R.groups.length>1?'Gruppe '+(i+1):'Alle zusammen'}${g.pl.length<2?' (Freilos)':''}</h3>${g.pl.length<2?`<div class="row"><span class="nm">${esc(nm(g.pl[0]))}</span><span class="tag">kommt weiter</span></div>`:ptsRows(g,`data-g="${i}"`,false)}</div>`).join('')+
+   Object.entries(R.tb||{}).map(([gi,l])=>tbCards(l,i=>`data-g="${gi}" data-t="${i}"`,false,'Stechen'+(R.groups.length>1?' Gruppe '+(+gi+1):''),'Gleichstand auf dem letzten Platz. Wer hier hinten liegt, scheidet aus.')).join('')+
+   (S.rounds.length>1?'<h2>Bisher</h2>'+S.rounds.slice(0,-1).map(pastRound).join(''):'');
+   bar=`<button class="main" id="go" data-act="fr">Runde auswerten</button>`;
+  }
+ }else{
+  const st=standings(),m=['🥇','🥈','🥉'],s=stats();
+  h+=`<p class="big">🏆</p><h2 style="text-align:center;font-size:32px">${esc(nm(S.champ))}</h2><p class="sub">ist Mario-Kart-Weltmeister!</p><div class="card"><table><tr><th>Platz</th><th>Name</th><th class="n">Punkte</th><th class="n">Ø</th><th class="n">Runden</th></tr>`+
+  st.map((id,i)=>{const x=s[id];return `<tr><td>${m[i]||(i+1)+'.'}</td><td>${esc(nm(id))}</td><td class="n">${x.t}</td><td class="n">${x.n?(x.t/x.n).toFixed(1).replace('.',','):'–'}</td><td class="n">${x.n}</td></tr>`}).join('')+
+  '</table><p class="hint">Punkte = alle Runden addiert (Vorrunde und K.-o., ohne Stechen). Ø = Punkte geteilt durch die Zahl der selbst gespielten Runden.</p></div>';
+  bar='<button class="main" data-act="new">Neues Turnier</button>';
+ }
+ if(bar)h+=`<div class="bar">${bar}</div>`;
+ if(cur!=='Setup')h+='<button class="link" data-act="reset">Turnier abbrechen</button>';
+ $('#app').innerHTML=h;setBtn()}
+
+document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
+ if(d.name!==undefined){S.players.find(p=>p.id===d.name).name=t.value;save()}
+ else if(d.p){const L=S.rounds[S.rounds.length-1];
+  const g=d.vt!==undefined?S.vtb[+d.vt]:d.t!==undefined?L.tb[d.g][+d.t]:S.phase==='vor'?S.cups[+d.g]:L.groups[+d.g];
+  g.pts[d.p]=t.value;save();
+  if(S.phase==='vor'){$('#tot').innerHTML=totalsHtml();
+   if(d.vt===undefined){const c=document.querySelector(`[data-card="${d.g}"]`),ok=complete([g]);c.classList.toggle('done',ok);c.querySelector('h3').innerHTML='Cup '+(+d.g+1)+(ok?' <span class="tag">✓ fertig</span>':'')}}
+  setBtn()}});
+document.addEventListener('change',e=>{const t=e.target,o=t.dataset.opt;if(!o)return;
+ S.opts[o]=o==='vor'?t.checked:+t.value;save();render()});
+const again=()=>{const p=S.players.map(x=>({id:x.id,name:x.name})),o=S.opts;S=fresh();S.players=p;S.opts=o;save();render()};
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.view){S.view=b.dataset.view;render();scrollTo(0,0);return}
+ if(b.dataset.del){if(S.players.length>2){S.players=S.players.filter(p=>p.id!==b.dataset.del);save();render()}return}
+ switch(b.dataset.act){
+  case 'add':if(S.players.length<24){S.players.push({id:uid(),name:''});save();render();const i=document.querySelectorAll('[data-name]');i[i.length-1].focus()}break;
+  case 'shuf':for(let i=S.players.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[S.players[i],S.players[j]]=[S.players[j],S.players[i]]}save();render();break;
+  case 'start':start();break;
+  case 'fv':{const t=vorTie();if(t){S.vtb=S.vtb||[];S.vtb.push({pl:t,pts:{}});save();render()}else finishVor();break}
+  case 'fr':{const R=S.rounds[S.rounds.length-1];R.tb=R.tb||{};let any=false;
+   R.groups.forEach((g,i)=>{if(g.pl.length>1){const r=resolve(R,i);if(r.pending){(R.tb[i]=R.tb[i]||[]).push({pl:r.pending,pts:{}});any=true}}});
+   if(any){save();render()}else finishRound();break}
+  case 'new':again();break;
+  case 'reset':if(confirm('Turnier wirklich abbrechen? Die Ergebnisse gehen verloren.'))again();break}});
+render();
+</script>
+</body>
+</html>
