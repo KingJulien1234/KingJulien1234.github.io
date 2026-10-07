@@ -23,6 +23,7 @@ h3{font-size:18px;color:var(--blue);margin:0 0 8px}
 .sub{text-align:center;color:var(--mut);margin:0 0 12px;font-size:14px}
 .steps{display:flex;gap:6px;justify-content:center;margin:8px 0 6px;flex-wrap:wrap}
 .steps button{font-family:'Permanent Marker',cursive;font-size:13px;padding:3px 10px;border:2px solid var(--mut);border-radius:20px;color:var(--mut);background:none}.steps button.past{border-color:var(--blue);color:var(--blue)}.steps button.on{border-color:var(--red);color:var(--red);transform:rotate(-2deg)}.steps button:disabled{opacity:.45}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{display:inline-flex;gap:6px;align-items:center;border:2px solid var(--mut);border-radius:20px;padding:4px 10px;font-size:14px;font-weight:700}.chip input{accent-color:var(--red)}.chip:has(input:checked){border-color:var(--blue);color:var(--blue)}h4{margin:12px 0 6px;font-size:14px;color:var(--mut)}.cupn{color:var(--red);font-size:14px;font-family:Nunito,sans-serif;font-weight:800}
 .card{background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:12px;margin:10px 0;backdrop-filter:blur(2px)}
 .row{display:flex;gap:8px;align-items:center;margin:6px 0}
 input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--paper);border:2px solid var(--mut);border-radius:8px;padding:9px 10px;min-width:0}
@@ -60,8 +61,10 @@ tr.q td:first-child{color:var(--ok);font-weight:800}
 <main id="app"></main>
 <script>
 const $=s=>document.querySelector(s),uid=()=>Math.random().toString(36).slice(2,8),KEY='mk-turnier-v1';
-const fresh=()=>({players:[1,2,3,4].map(()=>({id:uid(),name:''})),opts:{vor:true,k:4,q:4},phase:'setup',seed:[],cups:[],rounds:[],alive:[],outOrder:[],vorRank:[],champ:null,view:null,vtb:[]});
+const GRUND=['Pilz-Cup','Blumen-Cup','Stern-Cup','Spezial-Cup','Panzer-Cup','Bananen-Cup','Blatt-Cup','Blitz-Cup','Ei-Cup','Triforce-Cup','Glocken-Cup','Crossing-Cup'],BOOST=['Goldener-Turbo-Cup','Glückskatzen-Cup','Rüben-Cup','Propeller-Cup','Fels-Cup','Mond-Cup','Frucht-Cup','Bumerang-Cup','Feder-Cup','Doppelkirschen-Cup','Eichel-Cup','Stachi-Cup'],ALL=[...GRUND,...BOOST];
+const fresh=()=>({players:[1,2,3,4].map(()=>({id:uid(),name:''})),opts:{vor:true,k:4,q:4},phase:'setup',seed:[],cups:[],rounds:[],alive:[],outOrder:[],vorRank:[],champ:null,view:null,vtb:[],mk:ALL.slice(),deck:[]});
 let S;try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
+S.mk=S.mk||ALL.slice();S.deck=S.deck||[];
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const nm=id=>(S.players.find(p=>p.id===id)||{}).name||'?';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -82,13 +85,18 @@ function stats(){const s={};S.players.forEach(p=>s[p.id]={t:0,n:0});
  const add=g=>g.pl.forEach(i=>{const v=val(g.pts[i]);if(v!==null){s[i].t+=v;s[i].n++}});
  S.cups.forEach(add);S.rounds.forEach(r=>r.groups.forEach(add));return s}
 
+function drawCup(){const pool=S.mk.length?S.mk:ALL;S.deck=S.deck.filter(c=>pool.includes(c));if(!S.deck.length){S.deck=pool.slice();for(let i=S.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[S.deck[i],S.deck[j]]=[S.deck[j],S.deck[i]]}}return S.deck.pop()}
+const cupTag=c=>c.cup?` · <span class="cupn">${esc(c.cup)}</span>`:'';
+const vh=(c,i)=>`Lauf ${i+1}${cupTag(c)} ${complete([c])?'<span class="tag">✓ fertig</span>':''}`;
+function cupsCard(){const g=(t,l)=>`<h4>${t}</h4><div class="chips">`+l.map(c=>`<label class="chip"><input type="checkbox" data-cup="${esc(c)}" ${S.mk.includes(c)?'checked':''}>${esc(c)}</label>`).join('')+'</div>';
+ return `<div class="card"><h3>Mario Kart 8 Cups (<span id="mkc">${S.mk.length}</span>/${ALL.length})</h3><p class="hint">Jeder Lauf und jede K.-o.-Gruppe bekommt beim Start zufällig einen dieser Cups, ohne Wiederholung, bis alle durch sind. Wähl ab, was ihr nicht habt.</p>`+g('Grundspiel',GRUND)+g('Booster-Streckenpass',BOOST)+'<div class="row" style="margin-top:10px"><button class="ghost" data-act="cupall">Alle</button><button class="ghost" data-act="cupnone">Keine</button></div></div>'}
 function start(){
  S.players.forEach((p,i)=>{p.name=p.name.trim()||'Spieler '+(i+1)});
  S.seed=S.players.map(p=>p.id);const N=S.seed.length,k=Math.min(S.opts.k,N);
- S.rounds=[];S.outOrder=[];S.champ=null;S.vorRank=[];S.vtb=[];S.view=null;
+ S.rounds=[];S.outOrder=[];S.champ=null;S.vorRank=[];S.vtb=[];S.view=null;S.deck=[];
  if(S.opts.vor&&N>2){
   const n=N>k?N:3;S.cups=[];
-  for(let i=0;i<n;i++)S.cups.push({pl:N>k?[...Array(k)].map((_,j)=>S.seed[(i+j)%N]):S.seed.slice(),pts:{}});
+  for(let i=0;i<n;i++)S.cups.push({pl:N>k?[...Array(k)].map((_,j)=>S.seed[(i+j)%N]):S.seed.slice(),pts:{},cup:drawCup()});
   S.phase='vor';
  }else{S.cups=[];S.alive=S.seed.slice();S.phase='ko';newRound()}
  save();render()}
@@ -99,7 +107,7 @@ function newRound(){
  const g=n<=k?1:Math.ceil(n/k),gs=[...Array(g)].map(()=>[]);
  a.forEach((id,i)=>{const r=Math.floor(i/g);gs[r%2?g-1-i%g:i%g].push(id)});
  const label=n===2?'Finale':n<=4?'Halbfinale':'K.-o.-Runde '+(S.rounds.length+1);
- S.rounds.push({label,groups:gs.map(pl=>({pl,pts:{}})),out:null,tb:{}})}
+ S.rounds.push({label,groups:gs.map(pl=>({pl,pts:{},cup:pl.length>1?drawCup():null})),out:null,tb:{}})}
 
 function finishVor(){
  const r=totals().map(x=>x.id);S.vorRank=r;const q=Math.min(S.opts.q,r.length);
@@ -132,9 +140,9 @@ function steps(V){const hv=S.phase==='setup'?S.opts.vor:S.cups.length>0,o=hv?['S
 const ptsRows=(g,at,ro)=>g.pl.map(id=>`<div class="row"><span class="nm">${esc(nm(id))}</span><input class="pts" type="number" inputmode="numeric" min="0" placeholder="Pkt." ${at} data-p="${id}" value="${g.pts[id]??''}" ${ro?'disabled':''} aria-label="Punkte ${esc(nm(id))}"></div>`).join('');
 function totalsHtml(){const T=totals(),q=Math.min(S.opts.q,T.length);
  return '<table><tr><th>#</th><th>Name</th><th class="n">Punkte</th></tr>'+T.map((x,i)=>`<tr class="${i<q?'q':''} ${i===q-1&&q<T.length?'cut':''}"><td>${i+1}.</td><td>${esc(nm(x.id))}</td><td class="n">${x.pts}</td></tr>`).join('')+'</table>'}
-const tbCards=(l,at,ro,title,hint)=>l.map((s,i)=>`<div class="card"><h3>${title}</h3><p class="hint">${hint}</p>${ptsRows(s,at(i),ro)}</div>`).join('');
+const tbCards=(l,at,ro,title,hint)=>l.map((s,i)=>`<div class="card"><h3>${title}${cupTag(s)}</h3><p class="hint">${hint}</p>${ptsRows(s,at(i),ro)}</div>`).join('');
 function pastRound(r){const f=g=>g.pl.slice().sort((a,b)=>(val(g.pts[b])||0)-(val(g.pts[a])||0)).map(id=>esc(nm(id))+' '+(g.pts[id]??'–')).join(' · ');
- return `<div class="card"><h3>${r.label}</h3>`+r.groups.map((g,i)=>`<div>${r.groups.length>1?'<b>Gruppe '+(i+1)+':</b> ':''}${f(g)}</div>`).join('')+
+ return `<div class="card"><h3>${r.label}</h3>`+r.groups.map((g,i)=>`<div><b>${r.groups.length>1?'Gruppe '+(i+1):'Cup'}${g.cup?' · '+esc(g.cup):''}:</b> ${f(g)}</div>`).join('')+
  Object.values(r.tb||{}).flat().map(s=>`<div class="hint">Stechen: ${f(s)}</div>`).join('')+(r.out?`<div class="out">raus: ${r.out.map(i=>esc(nm(i))).join(', ')}</div>`:'')+'</div>'}
 
 function render(){
@@ -151,11 +159,11 @@ function render(){
   <p class="hint">Jeder Cup wird mit wenigen Fahrern gespielt, alle Punkte zählen. Bei vielen Spielern wechseln die Lobbys reihum wie auf dem Flipchart.</p>
   <div class="opt"><span>Fahrer pro Lobby</span><select data-opt="k">${[2,3,4,5,6,8,12].map(v=>`<option ${v===S.opts.k?'selected':''}>${v}</option>`).join('')}</select></div>
   ${S.opts.vor?`<div class="opt"><span>Weiter ins K.-o.</span><select data-opt="q">${Array.from({length:Math.max(0,N-2)},(_,i)=>i+2).map(v=>`<option ${v===Math.min(S.opts.q,N-1)?'selected':''}>${v}</option>`).join('')}</select></div>`:''}
-  <p class="hint">K.-o.: In jeder Runde scheidet der Letzte jeder Gruppe aus, bis nur das Finale mit 2 Spielern bleibt. Bei Gleichstand gibt es ein Stechen.</p></div>`;
+  <p class="hint">K.-o.: In jeder Runde scheidet der Letzte jeder Gruppe aus, bis nur das Finale mit 2 Spielern bleibt. Bei Gleichstand gibt es ein Stechen.</p></div>`+cupsCard();
   bar=`<button class="main" id="go" ${N<2?'disabled':''} data-act="start">Turnier starten</button>`;
  }else if(V==='Vorrunde'){
   h+=`<h2>Vorrunde</h2><div class="card"><h3>${ro?'Endstand':'Zwischenstand'}</h3><div id="tot">${totalsHtml()}</div><p class="hint">Rot markiert: Die Top ${Math.min(S.opts.q,S.seed.length)} kommen weiter. Gleichstand an der Grenze: Stechen.</p></div>`+
-  S.cups.map((c,i)=>`<div class="card ${complete([c])?'done':''}" data-card="${i}"><h3>Cup ${i+1} ${complete([c])?'<span class="tag">✓ fertig</span>':''}</h3>${ptsRows(c,`data-g="${i}"`,ro)}</div>`).join('')+
+  S.cups.map((c,i)=>`<div class="card ${complete([c])?'done':''}" data-card="${i}"><h3>${vh(c,i)}</h3>${ptsRows(c,`data-g="${i}"`,ro)}</div>`).join('')+
   tbCards(S.vtb||[],i=>`data-vt="${i}"`,ro,'Stechen um den letzten Platz','Gleichstand an der Grenze. Wer hier vorne liegt, kommt weiter.');
   if(!ro)bar=`<button class="main" id="go" data-act="fv">Vorrunde abschließen</button>`;
  }else if(V==='K.-o.'){
@@ -163,7 +171,7 @@ function render(){
   if(ro){h+=S.rounds.map(pastRound).join('')}
   else{
    h+=`<h2>${R.label}</h2><p class="sub">Noch ${S.alive.length} im Rennen · der Letzte jeder Gruppe scheidet aus</p>`+
-   R.groups.map((g,i)=>`<div class="card"><h3>${R.groups.length>1?'Gruppe '+(i+1):'Alle zusammen'}${g.pl.length<2?' (Freilos)':''}</h3>${g.pl.length<2?`<div class="row"><span class="nm">${esc(nm(g.pl[0]))}</span><span class="tag">kommt weiter</span></div>`:ptsRows(g,`data-g="${i}"`,false)}</div>`).join('')+
+   R.groups.map((g,i)=>`<div class="card"><h3>${R.groups.length>1?'Gruppe '+(i+1):'Alle zusammen'}${g.pl.length<2?' (Freilos)':cupTag(g)}</h3>${g.pl.length<2?`<div class="row"><span class="nm">${esc(nm(g.pl[0]))}</span><span class="tag">kommt weiter</span></div>`:ptsRows(g,`data-g="${i}"`,false)}</div>`).join('')+
    Object.entries(R.tb||{}).map(([gi,l])=>tbCards(l,i=>`data-g="${gi}" data-t="${i}"`,false,'Stechen'+(R.groups.length>1?' Gruppe '+(+gi+1):''),'Gleichstand auf dem letzten Platz. Wer hier hinten liegt, scheidet aus.')).join('')+
    (S.rounds.length>1?'<h2>Bisher</h2>'+S.rounds.slice(0,-1).map(pastRound).join(''):'');
    bar=`<button class="main" id="go" data-act="fr">Runde auswerten</button>`;
@@ -185,11 +193,13 @@ document.addEventListener('input',e=>{const t=e.target,d=t.dataset;
   const g=d.vt!==undefined?S.vtb[+d.vt]:d.t!==undefined?L.tb[d.g][+d.t]:S.phase==='vor'?S.cups[+d.g]:L.groups[+d.g];
   g.pts[d.p]=t.value;save();
   if(S.phase==='vor'){$('#tot').innerHTML=totalsHtml();
-   if(d.vt===undefined){const c=document.querySelector(`[data-card="${d.g}"]`),ok=complete([g]);c.classList.toggle('done',ok);c.querySelector('h3').innerHTML='Cup '+(+d.g+1)+(ok?' <span class="tag">✓ fertig</span>':'')}}
+   if(d.vt===undefined){const c=document.querySelector(`[data-card="${d.g}"]`),ok=complete([g]);c.classList.toggle('done',ok);c.querySelector('h3').innerHTML=vh(g,+d.g)}}
   setBtn()}});
-document.addEventListener('change',e=>{const t=e.target,o=t.dataset.opt;if(!o)return;
+document.addEventListener('change',e=>{const t=e.target,o=t.dataset.opt;
+ if(t.dataset.cup!==undefined){S.mk=t.checked?[...S.mk,t.dataset.cup]:S.mk.filter(c=>c!==t.dataset.cup);save();$('#mkc').textContent=S.mk.length;return}
+ if(!o)return;
  S.opts[o]=o==='vor'?t.checked:+t.value;save();render()});
-const again=()=>{const p=S.players.map(x=>({id:x.id,name:x.name})),o=S.opts;S=fresh();S.players=p;S.opts=o;save();render()};
+const again=()=>{const p=S.players.map(x=>({id:x.id,name:x.name})),o=S.opts,m=S.mk;S=fresh();S.players=p;S.opts=o;S.mk=m;save();render()};
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
  if(b.dataset.view){S.view=b.dataset.view;render();scrollTo(0,0);return}
  if(b.dataset.del){if(S.players.length>2){S.players=S.players.filter(p=>p.id!==b.dataset.del);save();render()}return}
@@ -197,10 +207,12 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
   case 'add':if(S.players.length<24){S.players.push({id:uid(),name:''});save();render();const i=document.querySelectorAll('[data-name]');i[i.length-1].focus()}break;
   case 'shuf':for(let i=S.players.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[S.players[i],S.players[j]]=[S.players[j],S.players[i]]}save();render();break;
   case 'start':start();break;
-  case 'fv':{const t=vorTie();if(t){S.vtb=S.vtb||[];S.vtb.push({pl:t,pts:{}});save();render()}else finishVor();break}
+  case 'fv':{const t=vorTie();if(t){S.vtb=S.vtb||[];S.vtb.push({pl:t,pts:{},cup:drawCup()});save();render()}else finishVor();break}
   case 'fr':{const R=S.rounds[S.rounds.length-1];R.tb=R.tb||{};let any=false;
-   R.groups.forEach((g,i)=>{if(g.pl.length>1){const r=resolve(R,i);if(r.pending){(R.tb[i]=R.tb[i]||[]).push({pl:r.pending,pts:{}});any=true}}});
+   R.groups.forEach((g,i)=>{if(g.pl.length>1){const r=resolve(R,i);if(r.pending){(R.tb[i]=R.tb[i]||[]).push({pl:r.pending,pts:{},cup:drawCup()});any=true}}});
    if(any){save();render()}else finishRound();break}
+  case 'cupall':S.mk=ALL.slice();save();render();break;
+  case 'cupnone':S.mk=[];save();render();break;
   case 'new':again();break;
   case 'reset':if(confirm('Turnier wirklich abbrechen? Die Ergebnisse gehen verloren.'))again();break}});
 render();
